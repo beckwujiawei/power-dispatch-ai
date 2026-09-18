@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from app.schemas import ChatRequest, DispatchResponse
 from app.services.dispatch_service import get_mock_alerts, handle_message
+from app.services.model_service import get_model_status
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -18,7 +19,7 @@ AUDIT_FILE = BASE_DIR / "audit_logs.json"
 app = FastAPI(
     title="电力通信调度智能助手",
     description="第一版演示系统，不连接真实生产系统。",
-    version="0.2.0",
+    version="0.3.0",
 )
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -33,11 +34,12 @@ class AuditRequest(BaseModel):
 
 def write_audit_log(audit_request: AuditRequest) -> dict:
     """将确认记录写入本地 JSON 文件。"""
-
     if AUDIT_FILE.exists():
         try:
             logs = json.loads(AUDIT_FILE.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
+            if not isinstance(logs, list):
+                logs = []
+        except (json.JSONDecodeError, OSError):
             logs = []
     else:
         logs = []
@@ -50,14 +52,11 @@ def write_audit_log(audit_request: AuditRequest) -> dict:
         "content": audit_request.content,
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
-
     logs.append(log_item)
-
     AUDIT_FILE.write_text(
         json.dumps(logs, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-
     return log_item
 
 
@@ -72,17 +71,20 @@ def health():
         "status": "ok",
         "service": "power-dispatch-ai",
         "mode": "demo",
+        "model": get_model_status(),
     }
+
+
+@app.get("/api/config/model")
+def model_config():
+    """Expose non-sensitive model status for diagnostics."""
+    return get_model_status()
 
 
 @app.get("/api/alerts")
 def alerts():
     alert_items = get_mock_alerts()
-
-    return {
-        "items": alert_items,
-        "total": len(alert_items),
-    }
+    return {"items": alert_items, "total": len(alert_items)}
 
 
 @app.post("/api/dispatch/chat", response_model=DispatchResponse)
@@ -93,28 +95,17 @@ def dispatch_chat(request: ChatRequest):
 @app.post("/api/audit/confirm")
 def confirm_audit(request: AuditRequest):
     log_item = write_audit_log(request)
-
-    return {
-        "success": True,
-        "message": "确认记录已保存。",
-        "item": log_item,
-    }
+    return {"success": True, "message": "确认记录已保存。", "item": log_item}
 
 
 @app.get("/api/audit/logs")
 def get_audit_logs():
     if not AUDIT_FILE.exists():
-        return {
-            "items": [],
-            "total": 0,
-        }
-
+        return {"items": [], "total": 0}
     try:
         logs = json.loads(AUDIT_FILE.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+        if not isinstance(logs, list):
+            logs = []
+    except (json.JSONDecodeError, OSError):
         logs = []
-
-    return {
-        "items": logs,
-        "total": len(logs),
-    }
+    return {"items": logs, "total": len(logs)}
