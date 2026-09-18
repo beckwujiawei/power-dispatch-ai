@@ -1,0 +1,22 @@
+services:
+  power-dispatch-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: power-dispatch-ai:0.6.0
+    container_name: power-dispatch-ai
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MODEL_PROVIDER: ${MODEL_PROVIDER:-mock}
+      MODEL_NAME: ${MODEL_NAME:-mock-dispatch-model}
+      MODEL_BASE_URL: ${MODEL_BASE_URL:-}
+      MODEL_TIMEOUT: ${MODEL_TIMEOUT:-30}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - power_dispatch_data:/app/data
+
+volumes:
+  power_dispatch_data:

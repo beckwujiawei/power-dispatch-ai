@@ -1,0 +1,22 @@
+# Local runtime data and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Local data
+ audit_logs.json
+tickets.json
+
+# Git and tooling
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Documentation and tests not needed in the runtime image
+README.md
