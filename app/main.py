@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from app.schemas import ChatRequest, DispatchResponse
 from app.services.dispatch_service import get_mock_alerts, handle_message
 from app.services.model_service import get_model_status
+from app.services.report_service import build_handover_report
 from app.services.ticket_service import (
     VALID_STATUSES,
     create_ticket,
@@ -17,16 +18,11 @@ from app.services.ticket_service import (
     update_ticket_status,
 )
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
 AUDIT_FILE = BASE_DIR / "audit_logs.json"
 
-app = FastAPI(
-    title="电力通信调度智能助手",
-    description="第一版演示系统，不连接真实生产系统。",
-    version="0.5.0",
-)
+app = FastAPI(title="电力通信调度智能助手", description="第一版演示系统，不连接真实生产系统。", version="0.6.0")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -54,23 +50,13 @@ class TicketStatusRequest(BaseModel):
 
 
 def write_audit_log(audit_request: AuditRequest) -> dict:
-    if AUDIT_FILE.exists():
-        try:
-            logs = json.loads(AUDIT_FILE.read_text(encoding="utf-8"))
-            if not isinstance(logs, list):
-                logs = []
-        except (json.JSONDecodeError, OSError):
+    try:
+        logs = json.loads(AUDIT_FILE.read_text(encoding="utf-8")) if AUDIT_FILE.exists() else []
+        if not isinstance(logs, list):
             logs = []
-    else:
+    except (json.JSONDecodeError, OSError):
         logs = []
-    log_item = {
-        "id": len(logs) + 1,
-        "session_id": audit_request.session_id,
-        "operator": audit_request.operator,
-        "action": audit_request.action,
-        "content": audit_request.content,
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    }
+    log_item = {"id": len(logs) + 1, "session_id": audit_request.session_id, "operator": audit_request.operator, "action": audit_request.action, "content": audit_request.content, "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
     logs.append(log_item)
     AUDIT_FILE.write_text(json.dumps(logs, ensure_ascii=False, indent=2), encoding="utf-8")
     return log_item
@@ -92,11 +78,7 @@ def model_config():
 
 
 @app.get("/api/alerts")
-def alerts(
-    station: str | None = Query(default=None),
-    level: str | None = Query(default=None),
-    status: str | None = Query(default=None),
-):
+def alerts(station: str | None = Query(default=None), level: str | None = Query(default=None), status: str | None = Query(default=None)):
     items = get_mock_alerts()
     if station:
         items = [item for item in items if item.station == station]
@@ -110,6 +92,11 @@ def alerts(
 @app.post("/api/dispatch/chat", response_model=DispatchResponse)
 def dispatch_chat(request: ChatRequest):
     return handle_message(request.message)
+
+
+@app.get("/api/reports/handover")
+def handover_report():
+    return build_handover_report()
 
 
 @app.post("/api/audit/confirm")
@@ -133,12 +120,7 @@ def get_audit_logs():
 @app.post("/api/tickets")
 def create_ticket_endpoint(request: TicketCreateRequest):
     ticket = create_ticket(request.model_dump(exclude={"operator", "session_id"}), request.operator)
-    write_audit_log(AuditRequest(
-        session_id=request.session_id,
-        operator=request.operator,
-        action="确认并创建工单",
-        content=f"工单 {ticket['id']}：{ticket['title']}",
-    ))
+    write_audit_log(AuditRequest(session_id=request.session_id, operator=request.operator, action="确认并创建工单", content=f"工单 {ticket['id']}：{ticket['title']}"))
     return {"success": True, "message": "工单已创建。", "item": ticket}
 
 
@@ -158,10 +140,5 @@ def change_ticket_status(ticket_id: str, request: TicketStatusRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if ticket is None:
         raise HTTPException(status_code=404, detail="工单不存在")
-    write_audit_log(AuditRequest(
-        session_id=request.session_id,
-        operator=request.operator,
-        action="更新工单状态",
-        content=f"工单 {ticket_id} 状态更新为：{request.status}",
-    ))
+    write_audit_log(AuditRequest(session_id=request.session_id, operator=request.operator, action="更新工单状态", content=f"工单 {ticket_id} 状态更新为：{request.status}"))
     return {"success": True, "message": "工单状态已更新。", "item": ticket}

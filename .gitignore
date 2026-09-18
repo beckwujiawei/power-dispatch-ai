@@ -2,4 +2,5 @@
 __pycache__/
 *.pyc
 audit_logs.json
+tickets.json
 .env
