@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电力通信调度智能助手</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, "Microsoft YaHei", sans-serif;
+            background: #f3f6fa;
+            color: #1f2937;
+        }
+
+        .header {
+            height: 64px;
+            background: #123b68;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 28px;
+            font-size: 21px;
+            font-weight: bold;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1fr;
+            gap: 16px;
+            padding: 18px;
+            min-height: calc(100vh - 64px);
+        }
+
+        .panel {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            overflow-y: auto;
+        }
+
+        .panel h2 {
+            margin-top: 0;
+            font-size: 18px;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 12px;
+        }
+
+        .chat-box {
+            height: calc(100vh - 220px);
+            overflow-y: auto;
+            padding: 8px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 10px 12px;
+            border-radius: 8px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .user {
+            background: #dbeafe;
+            margin-left: 30px;
+        }
+
+        .assistant {
+            background: #ecfdf5;
+            margin-right: 30px;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        input {
+            flex: 1;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 15px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 6px;
+            padding: 10px 14px;
+            cursor: pointer;
+            color: white;
+            background: #2563eb;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        button.voice {
+            background: #059669;
+        }
+
+        button.voice:hover {
+            background: #047857;
+        }
+
+        .alert {
+            border-left: 4px solid #dc2626;
+            background: #fff7ed;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .alert-title {
+            font-weight: bold;
+            color: #991b1b;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 5px;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .action {
+            background: #eff6ff;
+            margin: 8px 0;
+            padding: 9px;
+            border-radius: 6px;
+        }
+
+        .ticket {
+            background: #fefce8;
+            border: 1px solid #fde68a;
+            padding: 12px;
+            border-radius: 6px;
+            line-height: 1.7;
+        }
+
+        .status {
+            color: #64748b;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .chat-box {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        电力通信调度智能助手
+    </div>
+
+    <div class="container">
+        <section class="panel">
+            <h2>通信告警</h2>
+            <div id="alerts">
+                正在加载告警...
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>智能调度对话</h2>
+
+            <div id="chatBox" class="chat-box">
+                <div class="message assistant">
+                    你好，我是电力通信调度智能助手。你可以问我：
+                    <br><br>
+                    1. 分析当前通信告警
+                    <br>
+                    2. 查询有哪些未恢复告警
+                    <br>
+                    3. 生成一个故障工单
+                    <br>
+                    4. 生成交接班报告
+                </div>
+            </div>
+
+            <div class="input-area">
+                <input id="messageInput" placeholder="请输入调度问题，例如：分析当前通信告警">
+                <button class="voice" onclick="startVoice()">语音输入</button>
+                <button onclick="sendMessage()">发送</button>
+            </div>
+
+            <div id="status" class="status">
+                当前为演示模式，暂未连接真实光明大模型。
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>分析结果</h2>
+            <div id="analysis">
+                暂无分析结果
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const input = document.getElementById("messageInput");
+        const chatBox = document.getElementById("chatBox");
+        const alertsBox = document.getElementById("alerts");
+        const analysisBox = document.getElementById("analysis");
+        const statusBox = document.getElementById("status");
+
+        async function loadAlerts() {
+    try {
+        const response = await fetch("/api/alerts");
+
+        if (!response.ok) {
+            throw new Error(`告警接口返回状态码：${response.status}`);
+        }
+
+        const data = await response.json();
+
+        alertsBox.innerHTML = "";
+
+        if (!data.items || data.items.length === 0) {
+            alertsBox.textContent = "当前没有告警。";
+            return;
+        }
+
+        data.items.forEach(alert => {
+            const item = document.createElement("div");
+            item.className = "alert";
+
+            item.innerHTML = `
+                <div class="alert-title">
+                    ${alert.station} - ${alert.device}
+                </div>
+                <div>${alert.description}</div>
+                <div>类型：${alert.alert_type}</div>
+                <div>时间：${alert.occurred_at}</div>
+                <span class="tag">
+                    ${alert.level} / ${alert.status}
+                </span>
+            `;
+
+            alertsBox.appendChild(item);
+        });
+    } catch (error) {
+        console.error("加载告警失败：", error);
+        alertsBox.textContent = "告警加载失败，请检查浏览器控制台。";
+    }
+}
+
+        function addMessage(type, text) {
+            const message = document.createElement("div");
+            message.className = `message ${type}`;
+            message.textContent = text;
+            chatBox.appendChild(message);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function renderResult(result) {
+            let html = `
+                <p><strong>识别意图：</strong>${result.intent}</p>
+                <p>${result.answer}</p>
+            `;
+
+            if (result.recommended_actions && result.recommended_actions.length > 0) {
+                html += "<h3>建议操作</h3>";
+
+                result.recommended_actions.forEach(action => {
+                    html += `<div class="action">${action}</div>`;
+                });
+            }
+
+            if (result.ticket_draft) {
+                const ticket = result.ticket_draft;
+
+                html += `
+                    <h3>工单草稿</h3>
+                    <div class="ticket">
+                        <strong>${ticket.title}</strong><br>
+                        优先级：${ticket.priority}<br>
+                        站点：${ticket.station}<br>
+                        关联设备：${ticket.related_device}<br>
+                        描述：${ticket.description}<br>
+                        状态：${ticket.status}
+                    </div>
+                `;
+            }
+
+            if (result.need_confirmation) {
+                html += `
+                    <br>
+                    <button onclick="confirmResult()">确认并保存记录</button>
+                `;
+            }
+
+            analysisBox.innerHTML = html;
+        }
+
+        async function sendMessage() {
+            const message = input.value.trim();
+
+            if (!message) {
+                return;
+            }
+
+            addMessage("user", message);
+            input.value = "";
+            statusBox.textContent = "正在分析，请稍候...";
+
+            try {
+                const response = await fetch("/api/dispatch/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: "demo-session"
+                    })
+                });
+
+                const result = await response.json();
+
+                addMessage("assistant", result.answer);
+                renderResult(result);
+                statusBox.textContent = "分析完成。当前结果仅供演示，请人工确认。";
+            } catch (error) {
+                addMessage("assistant", "系统调用失败，请检查后端服务是否启动。");
+                statusBox.textContent = "服务调用失败";
+            }
+        }
+
+        async function confirmResult() {
+    const content = analysisBox.innerText;
+
+    try {
+        const response = await fetch("/api/audit/confirm", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                session_id: "demo-session",
+                action: "调度员确认分析结果",
+                content: content,
+                operator: "演示调度员"
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            statusBox.textContent =
+                "确认成功，记录已保存到本地审计日志。";
+
+            alert("确认成功，审计记录已保存。");
+        } else {
+            statusBox.textContent = "确认记录保存失败。";
+        }
+    } catch (error) {
+        console.error(error);
+        statusBox.textContent = "保存确认记录时发生错误。";
+        alert("保存失败，请检查后端服务是否正常运行。");
+    }
+}
+        
+
+        function startVoice() {
+            const SpeechRecognition =
+                window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (!SpeechRecognition) {
+                alert("当前浏览器不支持语音识别，请使用最新版 Chrome 浏览器。");
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = "zh-CN";
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            statusBox.textContent = "正在听，请说话...";
+
+            recognition.start();
+
+            recognition.onresult = function(event) {
+                const text = event.results[0][0].transcript;
+                input.value = text;
+                statusBox.textContent = "语音识别完成，请检查文字后发送。";
+            };
+
+            recognition.onerror = function(event) {
+                statusBox.textContent = "语音识别失败：" + event.error;
+            };
+        }
+
+        input.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
+
+        loadAlerts();
+    </script>
+</body>
