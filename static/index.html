@@ -9,219 +9,87 @@
         body { margin: 0; font-family: Arial, "Microsoft YaHei", sans-serif; background: #f3f6fa; color: #1f2937; }
         .header { height: 64px; background: #123b68; color: white; display: flex; align-items: center; padding: 0 28px; font-size: 21px; font-weight: bold; }
         .container { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 16px; padding: 18px; min-height: calc(100vh - 64px); }
-        .panel { background: white; border-radius: 10px; padding: 18px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); overflow-y: auto; }
-        .panel h2 { margin-top: 0; font-size: 18px; border-bottom: 1px solid #e5e7eb; padding-bottom: 12px; }
-        .panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-        .panel-heading h2 { flex: 1; }
-        .small-button { padding: 7px 10px; font-size: 12px; white-space: nowrap; }
-        .chat-box { height: calc(100vh - 220px); overflow-y: auto; padding: 8px; background: #f8fafc; border-radius: 8px; }
+        .panel { background: white; border-radius: 10px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.08); overflow-y: auto; }
+        h2 { margin-top: 0; font-size: 18px; border-bottom: 1px solid #e5e7eb; padding-bottom: 12px; }
+        .filters { display: grid; gap: 8px; margin-bottom: 12px; }
+        select, input { width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; font-size: 14px; background: white; }
+        .button-row { display: flex; gap: 8px; }
+        button { border: 0; border-radius: 6px; padding: 9px 12px; cursor: pointer; color: white; background: #2563eb; font-size: 14px; }
+        button:hover { background: #1d4ed8; }
+        button.secondary { background: #64748b; }
+        button.voice { background: #059669; }
+        .alert { border-left: 4px solid #dc2626; background: #fff7ed; margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .alert-title { font-weight: bold; color: #991b1b; }
+        .tag { display: inline-block; padding: 3px 7px; border-radius: 4px; font-size: 12px; margin-top: 5px; background: #fee2e2; color: #991b1b; }
+        .chat-box { height: 390px; overflow-y: auto; padding: 8px; background: #f8fafc; border-radius: 8px; }
         .message { margin: 10px 0; padding: 10px 12px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
         .user { background: #dbeafe; margin-left: 30px; }
         .assistant { background: #ecfdf5; margin-right: 30px; }
         .input-area { display: flex; gap: 8px; margin-top: 12px; }
-        input { flex: 1; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; font-size: 15px; }
-        button { border: 0; border-radius: 6px; padding: 10px 14px; cursor: pointer; color: white; background: #2563eb; font-size: 14px; }
-        button:hover { background: #1d4ed8; }
-        button:disabled { background: #94a3b8; cursor: not-allowed; }
-        button.voice { background: #059669; }
-        button.voice:hover { background: #047857; }
-        .alert { border-left: 4px solid #dc2626; background: #fff7ed; margin: 10px 0; padding: 10px; border-radius: 5px; }
-        .alert-title { font-weight: bold; color: #991b1b; }
-        .tag { display: inline-block; padding: 3px 7px; border-radius: 4px; font-size: 12px; margin-top: 5px; background: #fee2e2; color: #991b1b; }
+        .input-area input { flex: 1; }
         .action { background: #eff6ff; margin: 8px 0; padding: 9px; border-radius: 6px; }
         .ticket { background: #fefce8; border: 1px solid #fde68a; padding: 12px; border-radius: 6px; line-height: 1.7; }
         .status { color: #64748b; font-size: 13px; margin-top: 8px; }
-        .audit-list { max-height: calc(100vh - 180px); overflow-y: auto; }
         .audit-item { border: 1px solid #e2e8f0; border-left: 4px solid #2563eb; border-radius: 6px; padding: 10px; margin: 10px 0; background: #f8fafc; }
         .audit-meta { color: #64748b; font-size: 12px; margin-bottom: 6px; }
         .audit-action { color: #1e40af; font-weight: bold; margin-bottom: 6px; }
         .audit-content { white-space: pre-wrap; line-height: 1.5; max-height: 130px; overflow-y: auto; font-size: 13px; }
-        .empty { color: #64748b; background: #f8fafc; border-radius: 6px; padding: 16px; text-align: center; }
-        .error { color: #b91c1c; background: #fef2f2; border-radius: 6px; padding: 12px; }
+        .empty, .error { color: #64748b; background: #f8fafc; border-radius: 6px; padding: 16px; text-align: center; }
+        .error { color: #b91c1c; background: #fef2f2; }
         @media (max-width: 1100px) { .container { grid-template-columns: 1fr 1.2fr; } .audit-panel { grid-column: 1 / -1; } }
-        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } .audit-panel { grid-column: auto; } .chat-box { height: 400px; } }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } .audit-panel { grid-column: auto; } }
     </style>
 </head>
 <body>
-    <div class="header">电力通信调度智能助手</div>
-    <div class="container">
-        <section class="panel">
-            <h2>通信告警</h2>
-            <div id="alerts">正在加载告警...</div>
-        </section>
+<div class="header">电力通信调度智能助手</div>
+<div class="container">
+    <section class="panel">
+        <h2>通信告警</h2>
+        <div class="filters">
+            <select id="stationFilter"><option value="">全部站点</option></select>
+            <select id="levelFilter"><option value="">全部等级</option><option value="严重">严重</option><option value="重要">重要</option><option value="一般">一般</option></select>
+            <select id="statusFilter"><option value="">全部状态</option><option value="未恢复">未恢复</option><option value="已恢复">已恢复</option></select>
+            <div class="button-row"><button onclick="loadAlerts()">查询告警</button><button class="secondary" onclick="resetFilters()">重置</button></div>
+        </div>
+        <div id="alertSummary" class="status">正在加载告警...</div>
+        <div id="alerts"></div>
+    </section>
 
-        <section class="panel">
-            <h2>智能调度对话</h2>
-            <div id="chatBox" class="chat-box">
-                <div class="message assistant">你好，我是电力通信调度智能助手。你可以问我：<br><br>1. 分析当前通信告警<br>2. 查询有哪些未恢复告警<br>3. 生成一个故障工单<br>4. 生成交接班报告</div>
-            </div>
-            <div class="input-area">
-                <input id="messageInput" placeholder="请输入调度问题，例如：分析当前通信告警">
-                <button class="voice" onclick="startVoice()">语音输入</button>
-                <button onclick="sendMessage()">发送</button>
-            </div>
-            <div id="status" class="status">当前为演示模式，暂未连接真实光明大模型。</div>
-        </section>
+    <section class="panel">
+        <h2>智能调度对话</h2>
+        <div id="chatBox" class="chat-box"><div class="message assistant">你好，我是电力通信调度智能助手。你可以问我：\n\n1. 分析当前通信告警\n2. 查询有哪些未恢复告警\n3. 生成一个故障工单\n4. 生成交接班报告</div></div>
+        <div class="input-area"><input id="messageInput" placeholder="请输入调度问题，例如：分析当前通信告警"><button class="voice" onclick="startVoice()">语音输入</button><button onclick="sendMessage()">发送</button></div>
+        <div id="status" class="status">当前为演示模式，暂未连接真实光明大模型。</div>
+    </section>
 
-        <section class="panel">
-            <h2>分析结果</h2>
-            <div id="analysis">暂无分析结果</div>
-        </section>
+    <section class="panel"><h2>分析结果</h2><div id="analysis">暂无分析结果</div></section>
 
-        <section class="panel audit-panel">
-            <div class="panel-heading">
-                <h2>审计记录</h2>
-                <button class="small-button" onclick="loadAuditLogs()">刷新记录</button>
-            </div>
-            <div id="auditSummary" class="status">正在加载审计记录...</div>
-            <div id="auditLogs" class="audit-list"></div>
-        </section>
-    </div>
-
-    <script>
-        const input = document.getElementById("messageInput");
-        const chatBox = document.getElementById("chatBox");
-        const alertsBox = document.getElementById("alerts");
-        const analysisBox = document.getElementById("analysis");
-        const statusBox = document.getElementById("status");
-        const auditLogsBox = document.getElementById("auditLogs");
-        const auditSummaryBox = document.getElementById("auditSummary");
-
-        async function loadAlerts() {
-            try {
-                const response = await fetch("/api/alerts");
-                if (!response.ok) throw new Error(`告警接口返回状态码：${response.status}`);
-                const data = await response.json();
-                alertsBox.innerHTML = "";
-                if (!data.items || data.items.length === 0) {
-                    alertsBox.textContent = "当前没有告警。";
-                    return;
-                }
-                data.items.forEach(alert => {
-                    const item = document.createElement("div");
-                    item.className = "alert";
-                    item.innerHTML = `<div class="alert-title">${alert.station} - ${alert.device}</div><div>${alert.description}</div><div>类型：${alert.alert_type}</div><div>时间：${alert.occurred_at}</div><span class="tag">${alert.level} / ${alert.status}</span>`;
-                    alertsBox.appendChild(item);
-                });
-            } catch (error) {
-                console.error("加载告警失败：", error);
-                alertsBox.textContent = "告警加载失败，请检查后端服务。";
-            }
-        }
-
-        async function loadAuditLogs() {
-            auditSummaryBox.textContent = "正在加载审计记录...";
-            auditLogsBox.innerHTML = "";
-            try {
-                const response = await fetch("/api/audit/logs");
-                if (!response.ok) throw new Error(`审计接口返回状态码：${response.status}`);
-                const data = await response.json();
-                const items = Array.isArray(data.items) ? [...data.items].reverse() : [];
-                auditSummaryBox.textContent = `共 ${items.length} 条确认记录`;
-                if (items.length === 0) {
-                    auditLogsBox.innerHTML = '<div class="empty">暂无审计记录。完成一次确认后，记录会显示在这里。</div>';
-                    return;
-                }
-                items.forEach(item => {
-                    const record = document.createElement("div");
-                    record.className = "audit-item";
-                    const meta = document.createElement("div");
-                    meta.className = "audit-meta";
-                    meta.textContent = `${item.created_at || "未知时间"} · ${item.operator || "未知操作人"} · 会话：${item.session_id || "未知"}`;
-                    const action = document.createElement("div");
-                    action.className = "audit-action";
-                    action.textContent = item.action || "未命名操作";
-                    const content = document.createElement("div");
-                    content.className = "audit-content";
-                    content.textContent = item.content || "无确认内容";
-                    record.append(meta, action, content);
-                    auditLogsBox.appendChild(record);
-                });
-            } catch (error) {
-                console.error("加载审计记录失败：", error);
-                auditSummaryBox.textContent = "审计记录加载失败";
-                auditLogsBox.innerHTML = '<div class="error">无法读取审计记录，请确认后端服务已启动。</div>';
-            }
-        }
-
-        function addMessage(type, text) {
-            const message = document.createElement("div");
-            message.className = `message ${type}`;
-            message.textContent = text;
-            chatBox.appendChild(message);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        function renderResult(result) {
-            let html = `<p><strong>识别意图：</strong>${result.intent}</p><p>${result.answer}</p>`;
-            if (result.recommended_actions && result.recommended_actions.length > 0) {
-                html += "<h3>建议操作</h3>";
-                result.recommended_actions.forEach(action => { html += `<div class="action">${action}</div>`; });
-            }
-            if (result.ticket_draft) {
-                const ticket = result.ticket_draft;
-                html += `<h3>工单草稿</h3><div class="ticket"><strong>${ticket.title}</strong><br>优先级：${ticket.priority}<br>站点：${ticket.station}<br>关联设备：${ticket.related_device}<br>描述：${ticket.description}<br>状态：${ticket.status}</div>`;
-            }
-            if (result.need_confirmation) html += '<br><button onclick="confirmResult()">确认并保存记录</button>';
-            analysisBox.innerHTML = html;
-        }
-
-        async function sendMessage() {
-            const message = input.value.trim();
-            if (!message) return;
-            addMessage("user", message);
-            input.value = "";
-            statusBox.textContent = "正在分析，请稍候...";
-            try {
-                const response = await fetch("/api/dispatch/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message, session_id: "demo-session" }) });
-                if (!response.ok) throw new Error(`对话接口返回状态码：${response.status}`);
-                const result = await response.json();
-                addMessage("assistant", result.answer);
-                renderResult(result);
-                statusBox.textContent = "分析完成。当前结果仅供演示，请人工确认。";
-            } catch (error) {
-                console.error("系统调用失败：", error);
-                addMessage("assistant", "系统调用失败，请检查后端服务是否启动。\n请确认已通过 http://127.0.0.1:8000/ 打开本页面。 ");
-                statusBox.textContent = "服务调用失败";
-            }
-        }
-
-        async function confirmResult() {
-            const content = analysisBox.innerText;
-            try {
-                const response = await fetch("/api/audit/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: "demo-session", action: "调度员确认分析结果", content, operator: "演示调度员" }) });
-                if (!response.ok) throw new Error(`确认接口返回状态码：${response.status}`);
-                const result = await response.json();
-                if (result.success) {
-                    statusBox.textContent = "确认成功，记录已保存到本地审计日志。";
-                    alert("确认成功，审计记录已保存。");
-                    await loadAuditLogs();
-                } else {
-                    statusBox.textContent = "确认记录保存失败。";
-                }
-            } catch (error) {
-                console.error("保存审计记录失败：", error);
-                statusBox.textContent = "保存确认记录时发生错误。";
-                alert("保存失败，请检查后端服务是否正常运行。");
-            }
-        }
-
-        function startVoice() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) { alert("当前浏览器不支持语音识别，请使用最新版 Chrome 浏览器。"); return; }
-            const recognition = new SpeechRecognition();
-            recognition.lang = "zh-CN";
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-            statusBox.textContent = "正在听，请说话...";
-            recognition.start();
-            recognition.onresult = function(event) { input.value = event.results[0][0].transcript; statusBox.textContent = "语音识别完成，请检查文字后发送。"; };
-            recognition.onerror = function(event) { statusBox.textContent = "语音识别失败：" + event.error; };
-        }
-
-        input.addEventListener("keydown", function(event) { if (event.key === "Enter") sendMessage(); });
-        loadAlerts();
-        loadAuditLogs();
-    </script>
+    <section class="panel audit-panel">
+        <div class="button-row" style="justify-content:space-between"><h2 style="border:0;margin-bottom:0">审计记录</h2><button onclick="loadAuditLogs()">刷新记录</button></div>
+        <div id="auditSummary" class="status">正在加载审计记录...</div><div id="auditLogs"></div>
+    </section>
+</div>
+<script>
+const input=document.getElementById('messageInput'), chatBox=document.getElementById('chatBox'), alertsBox=document.getElementById('alerts'), analysisBox=document.getElementById('analysis'), statusBox=document.getElementById('status');
+const stationFilter=document.getElementById('stationFilter'), levelFilter=document.getElementById('levelFilter'), statusFilter=document.getElementById('statusFilter');
+let stationsLoaded=false;
+async function loadAlerts(){
+  const params=new URLSearchParams(); if(stationFilter.value)params.set('station',stationFilter.value); if(levelFilter.value)params.set('level',levelFilter.value); if(statusFilter.value)params.set('status',statusFilter.value);
+  try{const r=await fetch('/api/alerts?'+params);if(!r.ok)throw Error();const data=await r.json();
+    if(!stationsLoaded){const all=await (await fetch('/api/alerts')).json();[...new Set(all.items.map(x=>x.station))].forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;stationFilter.appendChild(o)});stationsLoaded=true;}
+    document.getElementById('alertSummary').textContent=`当前显示 ${data.total} 条告警`;
+    alertsBox.innerHTML=''; if(!data.items.length){alertsBox.innerHTML='<div class="empty">没有符合条件的告警。</div>';return;}
+    data.items.forEach(a=>{const d=document.createElement('div');d.className='alert';d.innerHTML=`<div class="alert-title">${a.station} - ${a.device}</div><div>${a.description}</div><div>类型：${a.alert_type}</div><div>时间：${a.occurred_at}</div><span class="tag">${a.level} / ${a.status}</span>`;alertsBox.appendChild(d)});
+  }catch(e){alertsBox.innerHTML='<div class="error">告警加载失败，请检查后端服务。</div>';}
+}
+function resetFilters(){stationFilter.value='';levelFilter.value='';statusFilter.value='';loadAlerts()}
+function addMessage(type,text){const d=document.createElement('div');d.className='message '+type;d.textContent=text;chatBox.appendChild(d);chatBox.scrollTop=chatBox.scrollHeight}
+function renderResult(r){let h=`<p><strong>识别意图：</strong>${r.intent}</p><p>${r.answer}</p>`;(r.recommended_actions||[]).forEach(a=>h+=`<div class="action">${a}</div>`);if(r.ticket_draft){const t=r.ticket_draft;h+=`<h3>工单草稿</h3><div class="ticket"><strong>${t.title}</strong><br>优先级：${t.priority}<br>站点：${t.station}<br>关联设备：${t.related_device}<br>描述：${t.description}<br>状态：${t.status}</div>`}if(r.need_confirmation)h+='<br><button onclick="confirmResult()">确认并保存记录</button>';analysisBox.innerHTML=h}
+async function sendMessage(){const message=input.value.trim();if(!message)return;addMessage('user',message);input.value='';statusBox.textContent='正在分析，请稍候...';try{const r=await fetch('/api/dispatch/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,session_id:'demo-session'})});if(!r.ok)throw Error();const result=await r.json();addMessage('assistant',result.answer);renderResult(result);statusBox.textContent='分析完成。当前结果仅供演示，请人工确认。'}catch(e){addMessage('assistant','系统调用失败，请检查后端服务是否启动。');statusBox.textContent='服务调用失败'}}
+async function confirmResult(){try{const r=await fetch('/api/audit/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:'demo-session',action:'调度员确认分析结果',content:analysisBox.innerText,operator:'演示调度员'})});if(!r.ok)throw Error();statusBox.textContent='确认成功，记录已保存到本地审计日志。';await loadAuditLogs()}catch(e){statusBox.textContent='保存确认记录时发生错误。'}}
+async function loadAuditLogs(){const box=document.getElementById('auditLogs');try{const d=await (await fetch('/api/audit/logs')).json();const items=[...(d.items||[])].reverse();document.getElementById('auditSummary').textContent=`共 ${items.length} 条确认记录`;box.innerHTML=items.length?'':'<div class="empty">暂无审计记录。</div>';items.forEach(i=>box.innerHTML+=`<div class="audit-item"><div class="audit-meta">${i.created_at||'未知时间'} · ${i.operator||'未知操作人'} · 会话：${i.session_id||'未知'}</div><div class="audit-action">${i.action||'未命名操作'}</div><div class="audit-content">${i.content||'无确认内容'}</div></div>`)}catch(e){box.innerHTML='<div class="error">无法读取审计记录。</div>'}}
+function startVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){alert('当前浏览器不支持语音识别，请使用最新版 Chrome。');return}const r=new SR();r.lang='zh-CN';statusBox.textContent='正在听，请说话...';r.start();r.onresult=e=>{input.value=e.results[0][0].transcript;statusBox.textContent='语音识别完成，请检查文字后发送。'}}
+input.addEventListener('keydown',e=>{if(e.key==='Enter')sendMessage()});loadAlerts();loadAuditLogs();
+</script>
 </body>
 </html>
