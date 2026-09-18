@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 import json
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -19,7 +19,7 @@ AUDIT_FILE = BASE_DIR / "audit_logs.json"
 app = FastAPI(
     title="电力通信调度智能助手",
     description="第一版演示系统，不连接真实生产系统。",
-    version="0.3.0",
+    version="0.4.0",
 )
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -53,10 +53,7 @@ def write_audit_log(audit_request: AuditRequest) -> dict:
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
     logs.append(log_item)
-    AUDIT_FILE.write_text(
-        json.dumps(logs, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    AUDIT_FILE.write_text(json.dumps(logs, ensure_ascii=False, indent=2), encoding="utf-8")
     return log_item
 
 
@@ -77,14 +74,28 @@ def health():
 
 @app.get("/api/config/model")
 def model_config():
-    """Expose non-sensitive model status for diagnostics."""
     return get_model_status()
 
 
 @app.get("/api/alerts")
-def alerts():
-    alert_items = get_mock_alerts()
-    return {"items": alert_items, "total": len(alert_items)}
+def alerts(
+    station: str | None = Query(default=None, description="按站点筛选"),
+    level: str | None = Query(default=None, description="按告警等级筛选"),
+    status: str | None = Query(default=None, description="按恢复状态筛选"),
+):
+    """返回模拟告警，并支持按站点、等级和恢复状态筛选。"""
+    items = get_mock_alerts()
+    if station:
+        items = [item for item in items if item.station == station]
+    if level:
+        items = [item for item in items if item.level == level]
+    if status:
+        items = [item for item in items if item.status == status]
+    return {
+        "items": items,
+        "total": len(items),
+        "filters": {"station": station, "level": level, "status": status},
+    }
 
 
 @app.post("/api/dispatch/chat", response_model=DispatchResponse)
