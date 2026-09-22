@@ -1,34 +1,943 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>电力通信调度智能助手</title>
-<style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,"Microsoft YaHei",sans-serif;background:#f3f6fa;color:#1f2937}.header{height:64px;background:#123b68;color:#fff;display:flex;align-items:center;padding:0 28px;font-size:21px;font-weight:bold}.container{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:16px;padding:18px}.panel{background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px #00000014;overflow:auto}.panel h2{margin:0 0 12px;font-size:18px;border-bottom:1px solid #e5e7eb;padding-bottom:12px}.filters,.report-actions{display:grid;gap:8px;margin-bottom:12px}select,input{width:100%;border:1px solid #cbd5e1;border-radius:6px;padding:10px;font-size:14px;background:#fff}button{border:0;border-radius:6px;padding:9px 12px;cursor:pointer;color:#fff;background:#2563eb;font-size:14px}button:hover{background:#1d4ed8}button.secondary{background:#64748b}.button-row{display:flex;gap:8px}.button-row>*{flex:1}.status{color:#64748b;font-size:13px;margin:8px 0}.alert{border-left:4px solid #dc2626;background:#fff7ed;margin:10px 0;padding:10px;border-radius:5px}.alert-title{font-weight:bold;color:#991b1b}.tag,.ticket-status{display:inline-block;padding:3px 7px;border-radius:4px;font-size:12px;background:#fee2e2;color:#991b1b}.chat-box{height:360px;overflow:auto;padding:8px;background:#f8fafc;border-radius:8px}.message{margin:10px 0;padding:10px 12px;border-radius:8px;line-height:1.6;white-space:pre-wrap}.user{background:#dbeafe;margin-left:30px}.assistant{background:#ecfdf5;margin-right:30px}.input-area{display:flex;gap:8px;margin-top:12px}.input-area input{flex:1}.action{background:#eff6ff;margin:8px 0;padding:9px;border-radius:6px}.ticket,.report{background:#fefce8;border:1px solid #fde68a;padding:12px;border-radius:6px;line-height:1.7}.report{background:#eff6ff;border-color:#bfdbfe}.ticket-item,.audit-item{border:1px solid #e2e8f0;border-left:4px solid #2563eb;border-radius:6px;padding:10px;margin:10px 0;background:#f8fafc}.ticket-item{border-left-color:#d97706}.audit-meta{color:#64748b;font-size:12px;margin-bottom:6px}.audit-action{color:#1e40af;font-weight:bold}.audit-content{white-space:pre-wrap;line-height:1.5;max-height:130px;overflow:auto;font-size:13px}.empty,.error{padding:16px;text-align:center;background:#f8fafc;color:#64748b;border-radius:6px}.error{color:#b91c1c;background:#fef2f2}.wide{grid-column:1/-1}@media(max-width:1100px){.container{grid-template-columns:1fr 1.2fr}.wide{grid-column:1/-1}}@media(max-width:900px){.container{grid-template-columns:1fr}.wide{grid-column:auto}.input-area{flex-wrap:wrap}}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Power Dispatch AI</title>
+  <style>
+    :root {
+      --bg: #08111f;
+      --bg-elevated: #0d1a2b;
+      --panel: rgba(17, 29, 45, 0.92);
+      --panel-strong: rgba(21, 36, 58, 0.96);
+      --panel-soft: rgba(24, 39, 60, 0.8);
+      --primary: #4da3ff;
+      --primary-strong: #2c8ef6;
+      --secondary: #8ea7ff;
+      --success: #35c58a;
+      --warning: #f4b740;
+      --danger: #f05d6c;
+      --info: #5cc8e8;
+      --text: #edf4ff;
+      --text-soft: #a5bcda;
+      --text-muted: #6f88a6;
+      --border: rgba(157, 185, 215, 0.14);
+      --shadow: 0 12px 40px rgba(0, 0, 0, 0.24);
+      --radius-xl: 22px;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(180deg, #07111d 0%, #0b1727 100%);
+      color: var(--text);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    button, select, input, textarea {
+      font: inherit;
+    }
+
+    .topbar {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px 0 28px;
+      background: rgba(10, 17, 29, 0.84);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .brand-badge {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(77,163,255,0.22), rgba(138,143,255,0.25));
+      border: 1px solid rgba(125, 178, 255, 0.35);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
+      color: var(--primary);
+      font-size: 18px;
+    }
+
+    .brand-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: var(--text-soft);
+      font-size: 0.84rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(53, 197, 138, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(53, 197, 138, 0.2);
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 12px rgba(53, 197, 138, 0.9);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr) 340px;
+      gap: 18px;
+      width: min(1600px, calc(100% - 32px));
+      margin: 18px auto 26px;
+      min-height: calc(100vh - 120px);
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+    }
+
+    .sidebar {
+      padding: 18px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      color: var(--text-soft);
+      text-decoration: none;
+      font-weight: 600;
+      transition: 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: rgba(255,255,255,0.02);
+      border-color: var(--border);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(135deg, rgba(77,163,255,0.14), rgba(133,139,255,0.12));
+      border-color: rgba(102, 175, 255, 0.24);
+      color: var(--text);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+
+    .nav-icon {
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      font-size: 0.9rem;
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .metric-card {
+      padding: 18px 18px 14px;
+      background: linear-gradient(180deg, rgba(17, 29, 45, 0.96), rgba(21, 36, 58, 0.9));
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+    }
+
+    .metric-label {
+      color: var(--text-soft);
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      margin-top: 14px;
+      font-size: clamp(1.8rem, 2vw, 2.4rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+    }
+
+    .metric-foot {
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text-soft);
+      font-size: 0.8rem;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      border: 1px solid transparent;
+    }
+
+    .chip.success {
+      color: var(--success);
+      background: rgba(53,197,138,0.08);
+      border-color: rgba(53,197,138,0.2);
+    }
+
+    .chip.warning {
+      color: var(--warning);
+      background: rgba(244,183,64,0.08);
+      border-color: rgba(244,183,64,0.2);
+    }
+
+    .chip.danger {
+      color: var(--danger);
+      background: rgba(240,93,108,0.08);
+      border-color: rgba(240,93,108,0.2);
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+      gap: 18px;
+      min-height: 420px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 1.02rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .ghost-btn, .primary-btn, .danger-btn, .secondary-btn {
+      border: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    .primary-btn {
+      color: white;
+      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+      box-shadow: 0 8px 18px rgba(77, 163, 255, 0.25);
+    }
+
+    .secondary-btn {
+      color: var(--text);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+    }
+
+    .danger-btn {
+      color: white;
+      background: linear-gradient(135deg, #ff6b6b, var(--danger));
+      box-shadow: 0 8px 18px rgba(240, 93, 108, 0.22);
+    }
+
+    .ghost-btn {
+      color: var(--text-soft);
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+    }
+
+    .primary-btn:hover, .secondary-btn:hover, .ghost-btn:hover, .danger-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 420px;
+    }
+
+    .chat-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 18px 18px 14px;
+      background: rgba(8, 17, 31, 0.3);
+      min-height: 280px;
+      max-height: 440px;
+      overflow: auto;
+    }
+
+    .message {
+      max-width: 88%;
+      padding: 12px 14px;
+      border-radius: 16px;
+      line-height: 1.6;
+      font-size: 0.94rem;
+      word-break: break-word;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, rgba(77,163,255,0.2), rgba(90,132,255,0.18));
+      border: 1px solid rgba(113,164,255,0.25);
+      color: var(--text);
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--text-soft);
+    }
+
+    .composer {
+      display: flex;
+      gap: 12px;
+      padding: 14px 18px 18px;
+      border-top: 1px solid var(--border);
+      background: rgba(8, 17, 31, 0.28);
+    }
+
+    .composer input {
+      flex: 1;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 14px 16px;
+      outline: none;
+    }
+
+    .composer input:focus {
+      border-color: rgba(77,163,255,0.7);
+      box-shadow: 0 0 0 3px rgba(77,163,255,0.12);
+    }
+
+    .alert-list, .ticket-list, .audit-list {
+      padding: 14px 18px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .alert-item, .ticket-item {
+      display: grid;
+      grid-template-columns: 10px minmax(0, 1fr) auto;
+      gap: 14px;
+      padding: 14px 14px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      align-items: center;
+    }
+
+    .alert-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 10px rgba(240,93,108,0.8);
+    }
+
+    .alert-dot.warning { background: var(--warning); box-shadow: 0 0 10px rgba(244,183,64,0.8); }
+    .alert-dot.success { background: var(--success); box-shadow: 0 0 10px rgba(53,197,138,0.8); }
+
+    .alert-text h4, .ticket-text h4 {
+      margin: 0 0 6px;
+      font-size: 0.98rem;
+      color: var(--text);
+    }
+
+    .alert-text p, .ticket-text p {
+      margin: 0;
+      color: var(--text-soft);
+      line-height: 1.6;
+      font-size: 0.82rem;
+    }
+
+    .alert-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .mini-tag {
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+
+    .mini-tag.level-严重 { background: rgba(240,93,108,0.1); color: var(--danger); border-color: rgba(240,93,108,0.16); }
+    .mini-tag.level-重要 { background: rgba(244,183,64,0.1); color: var(--warning); border-color: rgba(244,183,64,0.16); }
+    .mini-tag.level-一般 { background: rgba(92,200,232,0.1); color: var(--info); border-color: rgba(92,200,232,0.16); }
+    .mini-tag.status-处理中 { background: rgba(77,163,255,0.1); color: var(--primary); border-color: rgba(77,163,255,0.18); }
+    .mini-tag.status-已恢复 { background: rgba(53,197,138,0.1); color: var(--success); border-color: rgba(53,197,138,0.18); }
+
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .workflow-box {
+      padding: 18px;
+    }
+
+    .workflow-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .workflow-step {
+      display: grid;
+      grid-template-columns: 12px minmax(0, 1fr);
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .step-node {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-top: 6px;
+      background: rgba(255,255,255,0.24);
+      border: 2px solid rgba(255,255,255,0.22);
+    }
+
+    .step-node.done { background: var(--success); border-color: rgba(53,197,138,0.5); box-shadow: 0 0 12px rgba(53,197,138,0.6); }
+    .step-node.active { background: var(--primary); border-color: rgba(77,163,255,0.5); box-shadow: 0 0 12px rgba(77,163,255,0.7); }
+    .step-node.wait { background: var(--warning); border-color: rgba(244,183,64,0.5); box-shadow: 0 0 12px rgba(244,183,64,0.7); }
+
+    .step-text strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+      font-size: 0.92rem;
+    }
+
+    .step-text span {
+      color: var(--text-soft);
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    .confirmation-card {
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(244,183,64,0.06), rgba(240,93,108,0.04));
+      border: 1px solid rgba(244,183,64,0.2);
+      border-radius: var(--radius-lg);
+    }
+
+    .confirmation-card h4 {
+      margin: 0 0 10px;
+      color: var(--warning);
+      font-size: 0.98rem;
+    }
+
+    .confirmation-card p {
+      color: var(--text-soft);
+      font-size: 0.84rem;
+      line-height: 1.7;
+      margin: 0 0 16px;
+    }
+
+    .confirm-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .confirm-actions button {
+      flex: 1;
+      min-height: 40px;
+    }
+
+    .result-box {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin: 0 18px 18px;
+      color: var(--text-soft);
+      line-height: 1.7;
+      font-size: 0.87rem;
+    }
+
+    .result-box h4 {
+      margin: 0 0 10px;
+      color: var(--text);
+      font-size: 0.96rem;
+    }
+
+    .empty-state {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      padding: 18px;
+    }
+
+    @media (max-width: 1200px) {
+      .workspace {
+        grid-template-columns: 200px minmax(0, 1fr);
+      }
+
+      .right-panel {
+        grid-column: 1 / -1;
+      }
+
+      .metric-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 860px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        order: 2;
+      }
+
+      .main {
+        order: 1;
+      }
+
+      .right-panel {
+        order: 3;
+      }
+
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-row {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        padding-inline: 16px;
+      }
+    }
+  </style>
 </head>
 <body>
-<div class="header">电力通信调度智能助手</div>
-<div class="container">
-<section class="panel"><h2>通信告警</h2><div class="filters"><select id="station"><option value="">全部站点</option></select><select id="level"><option value="">全部等级</option><option>严重</option><option>重要</option><option>一般</option></select><select id="alertStatus"><option value="">全部状态</option><option>未恢复</option><option>已恢复</option></select><div class="button-row"><button onclick="loadAlerts()">查询告警</button><button class="secondary" onclick="resetAlerts()">重置</button></div></div><div id="alertSummary" class="status"></div><div id="alerts"></div></section>
-<section class="panel"><h2>智能调度对话</h2><div id="chat" class="chat-box"><div class="message assistant">你好，我是电力通信调度智能助手。你可以问我：\n\n1. 分析当前通信告警\n2. 生成一个故障工单\n3. 生成交接班报告</div></div><div class="input-area"><input id="message" placeholder="请输入调度问题"><button onclick="sendMessage()">发送</button></div><div id="status" class="status">当前为演示模式。</div></section>
-<section class="panel"><h2>分析结果</h2><div id="analysis">暂无分析结果</div></section>
-<section class="panel wide"><div class="button-row"><h2 style="flex:1">交接班报告</h2><button onclick="loadReport()">生成报告</button><button onclick="copyReport()">复制报告</button></div><div id="report" class="report"><div class="empty">点击“生成报告”查看当前交接班摘要。</div></div></section>
-<section class="panel"><div class="button-row"><h2 style="flex:1">工单管理</h2><button onclick="loadTickets()">刷新</button></div><div class="button-row"><select id="ticketStatus"><option value="">全部状态</option><option>待确认</option><option>已确认</option><option>处理中</option><option>已关闭</option></select><button onclick="loadTickets()">查询</button></div><div id="ticketSummary" class="status"></div><div id="tickets"></div></section>
-<section class="panel"><div class="button-row"><h2 style="flex:1">审计记录</h2><button onclick="loadAudit()">刷新</button></div><div id="auditSummary" class="status"></div><div id="audit"></div></section>
-</div>
-<script>
-const $=id=>document.getElementById(id), state={reportText:''};
-async function loadAlerts(){const p=new URLSearchParams();if($('station').value)p.set('station',$('station').value);if($('level').value)p.set('level',$('level').value);if($('alertStatus').value)p.set('status',$('alertStatus').value);try{const d=await(await fetch('/api/alerts?'+p)).json();$('alertSummary').textContent=`当前显示 ${d.total} 条告警`;$('alerts').innerHTML=d.items.length?'':'<div class="empty">没有符合条件的告警。</div>';d.items.forEach(a=>$('alerts').innerHTML+=`<div class="alert"><div class="alert-title">${a.station} - ${a.device}</div><div>${a.description}</div><div>类型：${a.alert_type}　时间：${a.occurred_at}</div><span class="tag">${a.level} / ${a.status}</span></div>`);if(!$('station').dataset.loaded){const all=await(await fetch('/api/alerts')).json();[...new Set(all.items.map(a=>a.station))].forEach(s=>$('station').innerHTML+=`<option value="${s}">${s}</option>`);$('station').dataset.loaded='1'}}catch(e){$('alerts').innerHTML='<div class="error">告警加载失败。</div>'}}
-function resetAlerts(){$('station').value='';$('level').value='';$('alertStatus').value='';loadAlerts()}
-function addMessage(type,text){$('chat').innerHTML+=`<div class="message ${type}">${text}</div>`;$('chat').scrollTop=$('chat').scrollHeight}
-function renderResult(r){let h=`<p><strong>识别意图：</strong>${r.intent}</p><p>${r.answer}</p>`;(r.recommended_actions||[]).forEach(a=>h+=`<div class="action">${a}</div>`);if(r.ticket_draft){const t=r.ticket_draft;h+=`<div class="ticket"><strong>${t.title}</strong><br>优先级：${t.priority}<br>站点：${t.station}<br>设备：${t.related_device}<br>描述：${t.description}<br><button onclick='createTicket(${JSON.stringify(t)})'>确认并创建工单</button></div>`}$('analysis').innerHTML=h}
-async function sendMessage(){const m=$('message').value.trim();if(!m)return;addMessage('user',m);$('message').value='';try{const r=await(await fetch('/api/dispatch/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m,session_id:'demo-session'})})).json();addMessage('assistant',r.answer);renderResult(r)}catch(e){$('status').textContent='服务调用失败'}}
-async function createTicket(t){const r=await fetch('/api/tickets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...t,operator:'演示调度员'})});if(r.ok){$('status').textContent='工单已创建';loadTickets();loadAudit()}else $('status').textContent='工单创建失败'}
-async function loadTickets(){const s=$('ticketStatus').value;const d=await(await fetch('/api/tickets'+(s?'?status='+encodeURIComponent(s):''))).json();$('ticketSummary').textContent=`共 ${d.total} 条工单`;$('tickets').innerHTML=d.items.length?'':'<div class="empty">暂无工单。</div>';d.items.forEach(t=>$('tickets').innerHTML+=`<div class="ticket-item"><b>${t.id} · ${t.title}</b><br>优先级：${t.priority}　站点：${t.station}<br><span class="ticket-status">${t.status}</span><br><select onchange="changeTicket('${t.id}',this.value)"><option value="">更新状态</option><option>待确认</option><option>已确认</option><option>处理中</option><option>已关闭</option></select></div>`)}
-async function changeTicket(id,status){if(!status)return;await fetch('/api/tickets/'+encodeURIComponent(id)+'/status',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status,operator:'演示调度员'})});loadTickets();loadAudit()}
-async function loadAudit(){const d=await(await fetch('/api/audit/logs')).json(),items=[...(d.items||[])].reverse();$('auditSummary').textContent=`共 ${items.length} 条记录`;$('audit').innerHTML=items.length?'':'<div class="empty">暂无审计记录。</div>';items.forEach(i=>$('audit').innerHTML+=`<div class="audit-item"><div class="audit-meta">${i.created_at||''} · ${i.operator||''}</div><div class="audit-action">${i.action||''}</div><div class="audit-content">${i.content||''}</div></div>`)}
-async function loadReport(){try{const d=await(await fetch('/api/reports/handover')).json();state.reportText=`${d.title}\n生成时间：${d.generated_at}\n${d.summary}\n\n告警：${d.alerts.map(a=>`${a.station} - ${a.device}：${a.description}`).join('\n')}\n\n工单：${d.tickets.map(t=>`${t.id} - ${t.title}（${t.status}）`).join('\n')}\n\n建议：\n${d.recommendations.join('\n')}`;$('report').innerHTML=`<b>${d.title}</b><br>生成时间：${d.generated_at}<p>${d.summary}</p><b>统计</b><p>告警 ${d.statistics.total_alerts} 条，其中未恢复 ${d.statistics.unresolved_alerts} 条、严重 ${d.statistics.severe_alerts} 条；未关闭工单 ${d.statistics.open_tickets} 条。</p><b>交接建议</b><ul>${d.recommendations.map(x=>`<li>${x}</li>`).join('')}</ul>`}catch(e){$('report').innerHTML='<div class="error">报告生成失败，请检查后端服务。</div>'}}
-async function copyReport(){if(!state.reportText)await loadReport();if(state.reportText)await navigator.clipboard.writeText(state.reportText);$('status').textContent='交接班报告已复制'}
-$('message').addEventListener('keydown',e=>{if(e.key==='Enter')sendMessage()});loadAlerts();loadTickets();loadAudit();
-</script>
-</body></html>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge">⚡</div>
+      <div class="brand-name">Power Dispatch AI</div>
+    </div>
+    <div class="topbar-right">
+      <div class="status-pill"><span class="status-dot"></span>系统正常</div>
+      <span>模型：在线</span>
+      <span>演示调度员</span>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="panel sidebar">
+      <a class="nav-item active" href="#"><span class="nav-icon">⌂</span>总览</a>
+      <a class="nav-item" href="#"><span class="nav-icon">✦</span>智能助手</a>
+      <a class="nav-item" href="#"><span class="nav-icon">⚠</span>告警中心</a>
+      <a class="nav-item" href="#"><span class="nav-icon">▣</span>工单中心</a>
+      <a class="nav-item" href="#"><span class="nav-icon">⇄</span>运行方式</a>
+      <a class="nav-item" href="#"><span class="nav-icon">▤</span>交接班报告</a>
+      <a class="nav-item" href="#"><span class="nav-icon">◌</span>审计日志</a>
+    </aside>
+
+    <main class="main">
+      <section class="metric-row">
+        <div class="metric-card">
+          <div class="metric-label">严重告警</div>
+          <div class="metric-value">01</div>
+          <div class="metric-foot">
+            <span>本日</span>
+            <span class="chip danger">● 2% ↑</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">待确认任务</div>
+          <div class="metric-value">03</div>
+          <div class="metric-foot">
+            <span>工作流</span>
+            <span class="chip warning">● 5% ↑</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">处理中工单</div>
+          <div class="metric-value">08</div>
+          <div class="metric-foot">
+            <span>当前</span>
+            <span class="chip success">● 正常</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">系统可用性</div>
+          <div class="metric-value">99.9%</div>
+          <div class="metric-foot">
+            <span>24h</span>
+            <span class="chip success">● 稳定</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <div class="card chat-panel">
+          <div class="card-header">
+            <div class="card-title">智能调度助手</div>
+            <button class="ghost-btn" type="button" onclick="loadAlerts()">更新告警</button>
+          </div>
+
+          <div id="chat" class="chat-box">
+            <div class="message assistant">你好，我是电力通信调度智能助手。你可以直接输入：
+              “分析当前通信告警”“生成工单草稿”“生成交接班报告”“检查运行方式风险”</div>
+          </div>
+
+          <div class="composer">
+            <input id="message" placeholder="输入调度指令或故障描述…" />
+            <button class="primary-btn" type="button" onclick="sendMessage()">发送</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">告警中心</div>
+            <button class="secondary-btn" type="button" onclick="loadAlerts()">刷新</button>
+          </div>
+          <div class="alert-list" id="alertList"></div>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top:0;">
+        <div class="card-header">
+          <div class="card-title">分析结果</div>
+          <div class="alert-actions">
+            <button class="secondary-btn" type="button" onclick="loadReport()">生成交接班报告</button>
+            <button class="primary-btn" type="button" onclick="loadTickets()">刷新工单</button>
+          </div>
+        </div>
+        <div id="resultBox" class="result-box">
+          <h4>暂无分析结果</h4>
+          <div>请在左侧对话区输入任务描述，AI 将识别当前工作流，并给出建议和人工确认项。</div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="side-panel right-panel">
+      <div class="card workflow-box">
+        <div class="card-header" style="padding:0 0 12px; border-bottom:1px solid var(--border);">
+          <div class="card-title">工作流状态</div>
+        </div>
+        <div class="workflow-list" id="workflowList">
+          <div class="workflow-step">
+            <div class="step-node done"></div>
+            <div class="step-text"><strong>告警分析</strong><span>已完成，已评估告警影响范围</span></div>
+          </div>
+          <div class="workflow-step">
+            <div class="step-node active"></div>
+            <div class="step-text"><strong>风险评估</strong><span>当前正在执行，等待进一步确认</span></div>
+          </div>
+          <div class="workflow-step">
+            <div class="step-node"></div>
+            <div class="step-text"><strong>工单草稿</strong><span>待启动</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="confirmation-card" id="confirmationCard">
+        <h4>人工确认</h4>
+        <p>当前存在需要人工确认的步骤：生成故障工单草稿。请确认设备范围、安全措施和影响范围后再继续执行。</p>
+        <div class="confirm-actions">
+          <button class="ghost-btn" type="button">拒绝</button>
+          <button class="primary-btn" type="button">确认继续</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">工单管理</div>
+          <button class="secondary-btn" type="button" onclick="loadTickets()">刷新</button>
+        </div>
+        <div class="ticket-list" id="ticketList"></div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const state = { reportText: "" };
+
+    function formatLevel(level) {
+      return level || "一般";
+    }
+
+    function formatStatus(status) {
+      return status || "处理中";
+    }
+
+    async function loadAlerts() {
+      const params = new URLSearchParams();
+      const station = document.getElementById('station');
+      const level = document.getElementById('level');
+      const status = document.getElementById('alertStatus');
+      if (station && station.value) params.set('station', station.value);
+      if (level && level.value) params.set('level', level.value);
+      if (status && status.value) params.set('status', status.value);
+
+      const url = '/api/alerts' + (params.toString() ? '?' + params.toString() : '');
+      const res = await fetch(url);
+      const data = await res.json();
+      const items = data.items || [];
+      const list = document.getElementById('alertList');
+
+      if (!items.length) {
+        list.innerHTML = '<div class="empty-state">暂无告警数据</div>';
+        return;
+      }
+
+      list.innerHTML = items.map(item => `
+        <div class="alert-item">
+          <div class="alert-dot ${item.level === '严重' ? 'danger' : item.level === '重要' ? 'warning' : 'success'}"></div>
+          <div class="alert-text">
+            <h4>${item.station} / ${item.device}</h4>
+            <p>${item.description}</p>
+          </div>
+          <div class="alert-actions">
+            <span class="mini-tag level-${item.level || '一般'}">${item.level || '一般'}</span>
+            <span class="mini-tag status-${item.status || '处理中'}">${item.status || '处理中'}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function addMessage(type, text) {
+      const chat = document.getElementById('chat');
+      const div = document.createElement('div');
+      div.className = `message ${type}`;
+      div.textContent = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function renderWorkflow(steps) {
+      const container = document.getElementById('workflowList');
+      if (!steps || !steps.length) {
+        container.innerHTML = '<div class="empty-state">无当前工作流</div>';
+        return;
+      }
+
+      const html = steps.map((step, index) => {
+        const done = index < 1 ? 'done' : '';
+        const current = index === 0 ? 'active' : '';
+        const wait = index === 1 ? 'wait' : '';
+        const nodeClass = done || current || wait || '';
+        return `
+          <div class="workflow-step">
+            <div class="step-node ${nodeClass}"></div>
+            <div class="step-text">
+              <strong>${step.skill}</strong>
+              <span>${step.reason || '待执行'}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
+    function renderResult(r) {
+      const box = document.getElementById('resultBox');
+      let html = `
+        <h4>${r.intent || '智能分析'}</h4>
+        <div>${r.answer || '暂无说明'}</div>
+      `;
+
+      const actions = r.recommended_actions || [];
+      if (actions.length) {
+        html += '<div style="margin-top:14px; display:flex; flex-direction:column; gap:8px;">';
+        actions.forEach(a => {
+          html += `<div class="mini-tag" style="display:inline-flex; width:max-content; background:rgba(77,163,255,0.08); color:var(--primary); border-color:rgba(77,163,255,0.16);">${a}</div>`;
+        });
+        html += '</div>';
+      }
+
+      if (r.workflow && r.workflow.length) {
+        html += '<div style="margin-top:14px;"><strong>工作流：</strong></div>';
+        html += '<div style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">';
+        r.workflow.forEach(item => {
+          html += `<div style="padding:8px 10px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid var(--border); color:var(--text-soft);">${item.skill}：${item.reason || '待执行'}</div>`;
+        });
+        html += '</div>';
+      }
+
+      if (r.ticket_draft) {
+        html += `<div style="margin-top:14px;"><strong>工单草稿：</strong></div><pre style="white-space:pre-wrap; margin:10px 0 0; color:var(--text-soft);">${JSON.stringify(r.ticket_draft, null, 2)}</pre>`;
+      }
+
+      if (r.need_confirmation) {
+        html += `<div style="margin-top:14px; color:var(--warning); font-weight:700;">需要人工确认</div>`;
+      }
+
+      box.innerHTML = html;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('message');
+      const text = input.value.trim();
+      if (!text) return;
+
+      addMessage('user', text);
+      input.value = '';
+
+      try {
+        const res = await fetch('/api/dispatch/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, session_id: 'demo-session' })
+        });
+
+        const r = await res.json();
+        renderResult(r);
+        addMessage('assistant', r.answer || '已处理请求。');
+
+        if (r.workflow && r.workflow.length) {
+          renderWorkflow(r.workflow);
+        }
+
+        if (r.need_confirmation) {
+          const confirmCard = document.getElementById('confirmationCard');
+          confirmCard.innerHTML = `
+            <h4>人工确认</h4>
+            <p>${r.answer || '当前存在待确认步骤。请确认后再继续执行。'}</p>
+            <div class="confirm-actions">
+              <button class="ghost-btn" type="button">拒绝</button>
+              <button class="primary-btn" type="button">确认继续</button>
+            </div>
+          `;
+        }
+      } catch (error) {
+        addMessage('assistant', '请求失败，请稍后重试。');
+      }
+    }
+
+    async function loadTickets() {
+      const res = await fetch('/api/tickets');
+      const data = await res.json();
+      const list = document.getElementById('ticketList');
+      const items = data.items || [];
+
+      if (!items.length) {
+        list.innerHTML = '<div class="empty-state">暂无工单数据</div>';
+        return;
+      }
+
+      list.innerHTML = items.map(item => `
+        <div class="ticket-item">
+          <div class="alert-dot ${item.status === '已完成' ? 'success' : item.status === '待处理' ? 'warning' : 'info'}"></div>
+          <div class="ticket-text">
+            <h4>${item.title}</h4>
+            <p>${item.related_device || '未指定设备'} · ${item.priority || '一般'}</p>
+          </div>
+          <div class="alert-actions">
+            <span class="mini-tag status-${item.status || '处理中'}">${item.status || '处理中'}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function loadReport() {
+      const res = await fetch('/api/reports/handover');
+      const data = await res.json();
+      state.reportText = `${data.title}\n生成时间：${data.generated_at}\n\n${data.summary}`;
+      const box = document.getElementById('resultBox');
+      box.innerHTML = `
+        <h4>交接班报告</h4>
+        <div>${(data.summary || '').replace(/\n/g, '<br>')}</div>
+        <div style="margin-top:12px; color:var(--text-soft);">生成时间：${data.generated_at || '---'}</div>
+      `;
+    }
+
+    document.getElementById('message').addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+    loadAlerts();
+    loadTickets();
+  </script>
+</body>
+</html>
