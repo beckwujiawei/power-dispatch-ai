@@ -1,13 +1,4 @@
-from __future__ import annotations
+from app.agent.communication_agent import CommunicationAgent
+from app.agent.skill_registry import SkillRegistry, build_default_registry
 
-from app.skills.alert_analysis.skill import AlertAnalysisSkill
-from app.skills.base import BaseSkill
-from app.skills.handover_report.skill import HandoverReportSkill
-from app.skills.ticket.skill import TicketDraftSkill
-
-__all__ = [
-    "BaseSkill",
-    "AlertAnalysisSkill",
-    "TicketDraftSkill",
-    "HandoverReportSkill",
-]
+__all__ = ["CommunicationAgent", "SkillRegistry", "build_default_registry"]
