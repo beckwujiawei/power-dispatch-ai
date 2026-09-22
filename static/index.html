@@ -379,6 +379,21 @@
       box-shadow: 0 0 0 3px rgba(77,163,255,0.12);
     }
 
+    .filter-row {
+      display: flex;
+      gap: 10px;
+      padding: 12px 18px 0;
+      flex-wrap: wrap;
+    }
+
+    .filter-row select {
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
     .alert-list, .ticket-list, .audit-list {
       padding: 14px 18px 18px;
       display: flex;
@@ -407,6 +422,7 @@
 
     .alert-dot.warning { background: var(--warning); box-shadow: 0 0 10px rgba(244,183,64,0.8); }
     .alert-dot.success { background: var(--success); box-shadow: 0 0 10px rgba(53,197,138,0.8); }
+    .alert-dot.info { background: var(--info); box-shadow: 0 0 10px rgba(92,200,232,0.8); }
 
     .alert-text h4, .ticket-text h4 {
       margin: 0 0 6px;
@@ -442,6 +458,7 @@
     .mini-tag.level-一般 { background: rgba(92,200,232,0.1); color: var(--info); border-color: rgba(92,200,232,0.16); }
     .mini-tag.status-处理中 { background: rgba(77,163,255,0.1); color: var(--primary); border-color: rgba(77,163,255,0.18); }
     .mini-tag.status-已恢复 { background: rgba(53,197,138,0.1); color: var(--success); border-color: rgba(53,197,138,0.18); }
+    .mini-tag.status-待处理 { background: rgba(244,183,64,0.1); color: var(--warning); border-color: rgba(244,183,64,0.18); }
 
     .side-panel {
       display: flex;
@@ -620,7 +637,7 @@
       <section class="metric-row">
         <div class="metric-card">
           <div class="metric-label">严重告警</div>
-          <div class="metric-value">01</div>
+          <div class="metric-value" id="metricSerious">01</div>
           <div class="metric-foot">
             <span>本日</span>
             <span class="chip danger">● 2% ↑</span>
@@ -629,7 +646,7 @@
 
         <div class="metric-card">
           <div class="metric-label">待确认任务</div>
-          <div class="metric-value">03</div>
+          <div class="metric-value" id="metricConfirm">03</div>
           <div class="metric-foot">
             <span>工作流</span>
             <span class="chip warning">● 5% ↑</span>
@@ -638,7 +655,7 @@
 
         <div class="metric-card">
           <div class="metric-label">处理中工单</div>
-          <div class="metric-value">08</div>
+          <div class="metric-value" id="metricTicket">08</div>
           <div class="metric-foot">
             <span>当前</span>
             <span class="chip success">● 正常</span>
@@ -677,6 +694,22 @@
           <div class="card-header">
             <div class="card-title">告警中心</div>
             <button class="secondary-btn" type="button" onclick="loadAlerts()">刷新</button>
+          </div>
+          <div class="filter-row">
+            <select id="alertStation">
+              <option value="">全部站点</option>
+            </select>
+            <select id="alertLevel">
+              <option value="">全部等级</option>
+              <option value="严重">严重</option>
+              <option value="重要">重要</option>
+              <option value="一般">一般</option>
+            </select>
+            <select id="alertStatus">
+              <option value="">全部状态</option>
+              <option value="处理中">处理中</option>
+              <option value="已恢复">已恢复</option>
+            </select>
           </div>
           <div class="alert-list" id="alertList"></div>
         </div>
@@ -722,8 +755,8 @@
         <h4>人工确认</h4>
         <p>当前存在需要人工确认的步骤：生成故障工单草稿。请确认设备范围、安全措施和影响范围后再继续执行。</p>
         <div class="confirm-actions">
-          <button class="ghost-btn" type="button">拒绝</button>
-          <button class="primary-btn" type="button">确认继续</button>
+          <button class="ghost-btn" type="button" onclick="declineConfirmation()">拒绝</button>
+          <button class="primary-btn" type="button" onclick="confirmCurrentStep()">确认继续</button>
         </div>
       </div>
 
@@ -738,58 +771,50 @@
   </div>
 
   <script>
-    const state = { reportText: "" };
+    const state = { reportText: '', confirmationText: '', workflowContext: null };
 
-    function formatLevel(level) {
-      return level || "一般";
+    function updateMetricBadges() {
+      fetch('/api/alerts')
+        .then(r => r.json())
+        .then(d => {
+          const items = d.items || [];
+          const severe = items.filter(item => item.level === '严重').length;
+          const pending = items.filter(item => item.status === '处理中').length;
+          document.getElementById('metricSerious').textContent = String(severe).padStart(2, '0');
+          document.getElementById('metricConfirm').textContent = String(Math.max(1, pending)).padStart(2, '0');
+        })
+        .catch(() => undefined);
+
+      fetch('/api/tickets')
+        .then(r => r.json())
+        .then(d => {
+          const count = (d.items || []).filter(item => item.status !== '已完成').length;
+          document.getElementById('metricTicket').textContent = String(Math.max(1, count)).padStart(2, '0');
+        })
+        .catch(() => undefined);
     }
 
-    function formatStatus(status) {
-      return status || "处理中";
+    function getAlertTone(level) {
+      if (level === '严重') return 'danger';
+      if (level === '重要') return 'warning';
+      return 'success';
     }
 
-    async function loadAlerts() {
-      const params = new URLSearchParams();
-      const station = document.getElementById('station');
-      const level = document.getElementById('level');
-      const status = document.getElementById('alertStatus');
-      if (station && station.value) params.set('station', station.value);
-      if (level && level.value) params.set('level', level.value);
-      if (status && status.value) params.set('status', status.value);
-
-      const url = '/api/alerts' + (params.toString() ? '?' + params.toString() : '');
-      const res = await fetch(url);
-      const data = await res.json();
-      const items = data.items || [];
-      const list = document.getElementById('alertList');
-
-      if (!items.length) {
-        list.innerHTML = '<div class="empty-state">暂无告警数据</div>';
+    function setConfirmationCard(message, show = true) {
+      const card = document.getElementById('confirmationCard');
+      if (!show) {
+        card.style.display = 'none';
         return;
       }
-
-      list.innerHTML = items.map(item => `
-        <div class="alert-item">
-          <div class="alert-dot ${item.level === '严重' ? 'danger' : item.level === '重要' ? 'warning' : 'success'}"></div>
-          <div class="alert-text">
-            <h4>${item.station} / ${item.device}</h4>
-            <p>${item.description}</p>
-          </div>
-          <div class="alert-actions">
-            <span class="mini-tag level-${item.level || '一般'}">${item.level || '一般'}</span>
-            <span class="mini-tag status-${item.status || '处理中'}">${item.status || '处理中'}</span>
-          </div>
+      card.style.display = 'block';
+      card.innerHTML = `
+        <h4>人工确认</h4>
+        <p>${message || '当前存在待确认步骤。请确认后再继续执行。'}</p>
+        <div class="confirm-actions">
+          <button class="ghost-btn" type="button" onclick="declineConfirmation()">拒绝</button>
+          <button class="primary-btn" type="button" onclick="confirmCurrentStep()">确认继续</button>
         </div>
-      `).join('');
-    }
-
-    function addMessage(type, text) {
-      const chat = document.getElementById('chat');
-      const div = document.createElement('div');
-      div.className = `message ${type}`;
-      div.textContent = text;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
+      `;
     }
 
     function renderWorkflow(steps) {
@@ -800,16 +825,15 @@
       }
 
       const html = steps.map((step, index) => {
-        const done = index < 1 ? 'done' : '';
-        const current = index === 0 ? 'active' : '';
-        const wait = index === 1 ? 'wait' : '';
-        const nodeClass = done || current || wait || '';
+        const itemClass = index === 0 ? 'active' : (index === 1 ? 'wait' : '');
+        const doneClass = index < 1 ? 'done' : '';
+        const nodeClass = doneClass || itemClass || '';
         return `
           <div class="workflow-step">
             <div class="step-node ${nodeClass}"></div>
             <div class="step-text">
-              <strong>${step.skill}</strong>
-              <span>${step.reason || '待执行'}</span>
+              <strong>${step.skill || step.name || '处理步骤'}</strong>
+              <span>${step.reason || step.description || '待执行'}</span>
             </div>
           </div>
         `;
@@ -827,9 +851,9 @@
 
       const actions = r.recommended_actions || [];
       if (actions.length) {
-        html += '<div style="margin-top:14px; display:flex; flex-direction:column; gap:8px;">';
+        html += '<div style="margin-top:14px; display:flex; flex-wrap:wrap; gap:8px;">';
         actions.forEach(a => {
-          html += `<div class="mini-tag" style="display:inline-flex; width:max-content; background:rgba(77,163,255,0.08); color:var(--primary); border-color:rgba(77,163,255,0.16);">${a}</div>`;
+          html += `<div class="mini-tag" style="display:inline-flex; background:rgba(77,163,255,0.08); color:var(--primary); border-color:rgba(77,163,255,0.16);">${a}</div>`;
         });
         html += '</div>';
       }
@@ -854,43 +878,54 @@
       box.innerHTML = html;
     }
 
-    async function sendMessage() {
-      const input = document.getElementById('message');
-      const text = input.value.trim();
-      if (!text) return;
+    function addMessage(type, text) {
+      const chat = document.getElementById('chat');
+      const div = document.createElement('div');
+      div.className = `message ${type}`;
+      div.textContent = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
 
-      addMessage('user', text);
-      input.value = '';
+    async function loadAlerts() {
+      const station = document.getElementById('alertStation')?.value || '';
+      const level = document.getElementById('alertLevel')?.value || '';
+      const status = document.getElementById('alertStatus')?.value || '';
+      const params = new URLSearchParams();
+      if (station) params.set('station', station);
+      if (level) params.set('level', level);
+      if (status) params.set('status', status);
 
-      try {
-        const res = await fetch('/api/dispatch/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, session_id: 'demo-session' })
-        });
+      const url = '/api/alerts' + (params.toString() ? '?' + params.toString() : '');
+      const res = await fetch(url);
+      const data = await res.json();
+      const items = data.items || [];
+      const list = document.getElementById('alertList');
 
-        const r = await res.json();
-        renderResult(r);
-        addMessage('assistant', r.answer || '已处理请求。');
-
-        if (r.workflow && r.workflow.length) {
-          renderWorkflow(r.workflow);
-        }
-
-        if (r.need_confirmation) {
-          const confirmCard = document.getElementById('confirmationCard');
-          confirmCard.innerHTML = `
-            <h4>人工确认</h4>
-            <p>${r.answer || '当前存在待确认步骤。请确认后再继续执行。'}</p>
-            <div class="confirm-actions">
-              <button class="ghost-btn" type="button">拒绝</button>
-              <button class="primary-btn" type="button">确认继续</button>
-            </div>
-          `;
-        }
-      } catch (error) {
-        addMessage('assistant', '请求失败，请稍后重试。');
+      const stations = [...new Set(items.map(item => item.station).filter(Boolean))];
+      const stationSel = document.getElementById('alertStation');
+      if (stationSel) {
+        stationSel.innerHTML = '<option value="">全部站点</option>' + stations.map(s => `<option value="${s}">${s}</option>`).join('');
       }
+
+      if (!items.length) {
+        list.innerHTML = '<div class="empty-state">暂无告警数据</div>';
+        return;
+      }
+
+      list.innerHTML = items.map(item => `
+        <div class="alert-item">
+          <div class="alert-dot ${getAlertTone(item.level)}"></div>
+          <div class="alert-text">
+            <h4>${item.station} / ${item.device}</h4>
+            <p>${item.description}</p>
+          </div>
+          <div class="alert-actions">
+            <span class="mini-tag level-${item.level || '一般'}">${item.level || '一般'}</span>
+            <span class="mini-tag status-${item.status || '处理中'}">${item.status || '处理中'}</span>
+          </div>
+        </div>
+      `).join('');
     }
 
     async function loadTickets() {
@@ -930,14 +965,89 @@
       `;
     }
 
+    async function sendMessage() {
+      const input = document.getElementById('message');
+      const text = input.value.trim();
+      if (!text) return;
+
+      addMessage('user', text);
+      input.value = '';
+
+      try {
+        const res = await fetch('/api/dispatch/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, session_id: 'demo-session' })
+        });
+
+        const r = await res.json();
+        renderResult(r);
+        addMessage('assistant', r.answer || '已处理请求。');
+
+        if (r.workflow && r.workflow.length) {
+          renderWorkflow(r.workflow);
+        } else {
+          renderWorkflow([
+            { skill: '告警分析', reason: '已完成' },
+            { skill: '工单草稿', reason: '待处理' }
+          ]);
+        }
+
+        if (r.need_confirmation) {
+          setConfirmationCard(r.answer || '当前存在待确认步骤。请确认后再继续执行。', true);
+          state.confirmationText = r.answer || '当前步骤需要人工确认。';
+        } else {
+          setConfirmationCard('', false);
+        }
+
+        updateMetricBadges();
+      } catch (error) {
+        addMessage('assistant', '请求失败，请稍后重试。');
+      }
+    }
+
+    async function confirmCurrentStep() {
+      const payload = {
+        session_id: 'demo-session',
+        action: '确认执行当前步骤',
+        content: state.confirmationText || '确认继续当前流程步骤',
+        operator: '演示调度员'
+      };
+
+      await fetch('/api/audit/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      addMessage('assistant', '已确认，当前任务已继续执行。');
+      setConfirmationCard('', false);
+      await loadAlerts();
+      await loadTickets();
+    }
+
+    function declineConfirmation() {
+      const card = document.getElementById('confirmationCard');
+      card.innerHTML = `
+        <h4>已拒绝</h4>
+        <p>当前步骤已停止，建议修改任务描述后重新发起执行。</p>
+      `;
+      addMessage('assistant', '已拒绝当前步骤。请根据风险提示修改任务后再试。');
+    }
+
     document.getElementById('message').addEventListener('keydown', function (event) {
       if (event.key === 'Enter') {
         sendMessage();
       }
     });
 
+    document.getElementById('alertStation').addEventListener('change', loadAlerts);
+    document.getElementById('alertLevel').addEventListener('change', loadAlerts);
+    document.getElementById('alertStatus').addEventListener('change', loadAlerts);
+
     loadAlerts();
     loadTickets();
+    updateMetricBadges();
   </script>
 </body>
 </html>
