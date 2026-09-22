@@ -1,36 +1,38 @@
 from __future__ import annotations
 
-from app.agent.skill_registry import SkillRegistry, build_default_registry
-from app.skills.base import SkillContext, SkillResult
+from typing import List, Optional
+
+from pydantic import BaseModel
 
 
-class CommunicationAgent:
-    def __init__(self, registry: SkillRegistry | None = None):
-        self.registry = registry or build_default_registry()
+class ChatRequest(BaseModel):
+    message: str
+    session_id: Optional[str] = "demo-session"
 
-    def handle(
-        self,
-        message: str,
-        *,
-        session_id: str = "demo-session",
-        operator: str = "演示调度员",
-    ) -> SkillResult:
-        text = message.strip()
-        if not text:
-            return SkillResult(
-                skill="unknown",
-                answer="请告诉我需要查询或处理什么内容。",
-            )
 
-        candidates = self.registry.find_by_message(text)
-        if not candidates:
-            return SkillResult(
-                skill="general",
-                answer=(
-                    "我是通信调度智能助手，可以帮助你处理告警分析、检修、调度、"
-                    "运行方式、工单和交接班报告。"
-                ),
-            )
+class WorkflowStep(BaseModel):
+    skill: str
+    reason: str = ""
+    requires_confirmation: bool = False
 
-        context = SkillContext(session_id=session_id, operator=operator)
-        return candidates[0].execute(text, context)
+
+class Alert(BaseModel):
+    id: str
+    station: str
+    device: str
+    alert_type: str
+    level: str
+    status: str
+    occurred_at: str
+    description: str
+
+
+class DispatchResponse(BaseModel):
+    intent: str
+    answer: str
+    alerts: List[Alert] = []
+    recommended_actions: List[str] = []
+    ticket_draft: Optional[dict] = None
+    need_confirmation: bool = False
+    workflow: List[WorkflowStep] = []
+    confirmation_type: Optional[str] = None

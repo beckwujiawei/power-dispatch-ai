@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from app.skills.base import BaseSkill, SkillContext, SkillResult
-from app.services.report_service import build_handover_report
+from app.services.dispatch_service import create_ticket_draft
 
 
-class HandoverReportSkill(BaseSkill):
-    name = "handover_report"
-    description = "生成通信调度交接班报告与待跟踪事项清单"
-    triggers = ["交接班", "日报", "报告", "交班"]
+class TicketDraftSkill(BaseSkill):
+    name = "ticket_draft"
+    description = "生成故障工单草稿，供调度员审核后提交"
+    triggers = ["工单", "报修", "创建任务", "故障工单"]
+    requires_confirmation = True
 
     def can_handle(self, message: str) -> bool:
         return any(keyword in message for keyword in self.triggers)
@@ -17,15 +18,14 @@ class HandoverReportSkill(BaseSkill):
         message: str,
         context: SkillContext,
     ) -> SkillResult:
-        report = build_handover_report()
+        response = create_ticket_draft()
         return SkillResult(
             skill=self.name,
-            answer=report["summary"],
+            answer=response.answer,
             data={
-                "alerts": report.get("alerts", []),
-                "tickets": report.get("tickets", []),
-                "report": report,
+                "alerts": [alert.model_dump() for alert in response.alerts],
+                "ticket_draft": response.ticket_draft,
             },
-            recommended_actions=report.get("recommendations", []),
-            need_confirmation=False,
+            recommended_actions=response.recommended_actions,
+            need_confirmation=response.need_confirmation,
         )

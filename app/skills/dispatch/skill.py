@@ -3,10 +3,11 @@ from __future__ import annotations
 from app.skills.base import BaseSkill, SkillContext, SkillResult
 
 
-class DispatchSkill(BaseSkill):
-    name = "dispatch"
-    description = "调度指令、调度顺序和操作建议"
-    triggers = ["调度", "命令", "指令", "操作顺序", "调度建议"]
+class MaintenanceSkill(BaseSkill):
+    name = "maintenance"
+    description = "检修计划、检修任务和检修清单管理"
+    triggers = ["检修", "维修", "检修计划", "检修任务", "停电", "停送电"]
+    requires_confirmation = True
 
     def can_handle(self, message: str) -> bool:
         return any(keyword in message for keyword in self.triggers)
@@ -19,8 +20,8 @@ class DispatchSkill(BaseSkill):
         return SkillResult(
             skill=self.name,
             answer=(
-                "调度协同能力已接入框架。当前建议先核对设备状态、告警等级和当前运行方式，"
-                "再进行调度指令确认和风险评估。"
+                "检修管理能力已接入框架，当前为示例实现。"
+                "建议先确认检修对象、检修方式、停电范围和安全措施，再生成作业计划。"
             ),
             data={
                 "context": {
@@ -28,15 +29,15 @@ class DispatchSkill(BaseSkill):
                     "operator": context.operator,
                     "message": message,
                 },
-                "dispatch": {
+                "maintenance": {
                     "status": "draft",
-                    "steps": [],
+                    "tasks": [],
                 },
             },
             recommended_actions=[
-                "核对设备当前运行状态",
-                "确认调度指令是否符合运行方式要求",
-                "确认告警/设备影响范围",
+                "确认检修设备与停电范围",
+                "确认安全措施和工作票要求",
+                "确认检修窗口与回送时间",
             ],
             need_confirmation=True,
         )

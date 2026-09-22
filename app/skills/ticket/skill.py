@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from app.skills.base import BaseSkill, SkillContext, SkillResult
-from app.services.dispatch_service import create_ticket_draft
+from app.services.dispatch_service import analyze_alerts
 
 
-class TicketDraftSkill(BaseSkill):
-    name = "ticket_draft"
-    description = "生成故障工单草稿，供调度员审核后提交"
-    triggers = ["工单", "报修", "创建任务", "故障工单"]
+class AlertAnalysisSkill(BaseSkill):
+    name = "alert_analysis"
+    description = "分析通信告警、判断可能原因并给出排查建议"
+    triggers = ["告警", "故障", "异常", "中断", "分析"]
+    requires_confirmation = True
 
     def can_handle(self, message: str) -> bool:
         return any(keyword in message for keyword in self.triggers)
@@ -17,14 +18,11 @@ class TicketDraftSkill(BaseSkill):
         message: str,
         context: SkillContext,
     ) -> SkillResult:
-        response = create_ticket_draft()
+        response = analyze_alerts()
         return SkillResult(
             skill=self.name,
             answer=response.answer,
-            data={
-                "alerts": [alert.model_dump() for alert in response.alerts],
-                "ticket_draft": response.ticket_draft,
-            },
+            data={"alerts": [alert.model_dump() for alert in response.alerts]},
             recommended_actions=response.recommended_actions,
             need_confirmation=response.need_confirmation,
         )

@@ -3,10 +3,11 @@ from __future__ import annotations
 from app.skills.base import BaseSkill, SkillContext, SkillResult
 
 
-class OperationModeSkill(BaseSkill):
-    name = "operation_mode"
-    description = "运行方式分析、方式切换建议和风险提示"
-    triggers = ["运行方式", "方式切换", "备用", "运行模式", "倒换"]
+class DispatchSkill(BaseSkill):
+    name = "dispatch"
+    description = "调度指令、调度顺序和操作建议"
+    triggers = ["调度", "命令", "指令", "操作顺序", "调度建议"]
+    requires_confirmation = True
 
     def can_handle(self, message: str) -> bool:
         return any(keyword in message for keyword in self.triggers)
@@ -19,8 +20,8 @@ class OperationModeSkill(BaseSkill):
         return SkillResult(
             skill=self.name,
             answer=(
-                "运行方式能力已接入框架。当前建议优先检查现有方式状态、备用链路状态和故障影响范围，"
-                "确认切换方案是否满足安全和业务连续性要求。"
+                "调度协同能力已接入框架。当前建议先核对设备状态、告警等级和当前运行方式，"
+                "再进行调度指令确认和风险评估。"
             ),
             data={
                 "context": {
@@ -28,16 +29,15 @@ class OperationModeSkill(BaseSkill):
                     "operator": context.operator,
                     "message": message,
                 },
-                "operation_mode": {
-                    "status": "analysis",
-                    "mode": "current",
-                    "warnings": [],
+                "dispatch": {
+                    "status": "draft",
+                    "steps": [],
                 },
             },
             recommended_actions=[
-                "确认当前运行方式和备用方式状态",
-                "评估切换对业务的影响范围",
-                "确认倒换前后的安全措施",
+                "核对设备当前运行状态",
+                "确认调度指令是否符合运行方式要求",
+                "确认告警/设备影响范围",
             ],
             need_confirmation=True,
         )
