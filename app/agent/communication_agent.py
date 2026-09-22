@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from app.agent.skill_registry import SkillRegistry
-from app.agent.communication_agent import build_default_registry
+from app.agent.skill_registry import SkillRegistry, build_default_registry
 from app.skills.base import SkillContext, SkillResult
 
 
